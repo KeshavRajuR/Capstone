@@ -183,7 +183,7 @@ def main():
     btn.pack(side=RIGHT, expand=True, fill=X, padx=20)
 
 
-    root.config(menu=menu)
+        root.config(menu=menu)
 
     
     root.mainloop()
