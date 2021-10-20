@@ -196,3 +196,31 @@ if __name__ =='__main__':
         
 
 '''
+
+
+##########################################
+'''
+menu = Menu(root)
+    new_item = Menu(menu, tearoff=0)
+    menu.add_cascade(label ='File', menu = new_item)
+    new_item.add_command(label ='Open Logs', command = clicked)
+    new_item.add_separator()
+    new_item.add_command(label ='Exit', command = root.destroy)
+    
+
+    txtarea = Text(root, width=40, height=20)
+    txtarea.pack(pady=20)        
+    pathh = Entry(root)
+    pathh.pack(side=LEFT, expand=True, fill=X, padx=20)
+
+
+    btn = Button(root,text='Click here to view Logs', command=clicked)
+    #btn.grid(column=0,row=0)
+    btn.pack(side=RIGHT, expand=True, fill=X, padx=20)
+
+
+    root.config(menu=menu)
+
+    
+    root.mainloop()
+'''
