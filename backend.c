@@ -1,13 +1,13 @@
-#include "capstone.h"
+#include "capstone_FSM.h"
 
-char **getWatchList(char *location)
+int getWatchList(char *location)
 {
     FILE *watchlist = fopen(location, "r");
 
     if (!watchlist)
     {
         printf("File is not there\n");
-        return paths;
+        return -1;
     }
 
     int i = 0;
@@ -25,9 +25,19 @@ char **getWatchList(char *location)
 
     THREADCOUNT = i;
 
-    fclose(watchlist);
+    ptr = (struct directory *)malloc(THREADCOUNT * sizeof(struct directory));
 
-    return paths;
+    for (i = 0; i < THREADCOUNT; i++)
+    {
+        strncpy((ptr + i)->path, strtok(paths[i], ":"), PATH_MAX);
+        strncpy((ptr + i)->priv, strtok(NULL, ":"), BOOLVALUE);
+    }
+
+    fclose(watchlist);
+    free(paths);
+    paths = NULL;
+
+    return 0;
 }
 
 void syscall_error_msg(int ret, char *syscall)
@@ -54,7 +64,7 @@ int logger(char *message)
     return 0;
 }
 
-int logBuilder(u_int32_t eventMask, char *eventName, char *path, char *action)
+int logBuilder(u_int32_t eventMask, char *eventName, char *path, char *privilege, char *action)
 {
     char logInfo[256] = "";
 
@@ -80,13 +90,26 @@ int logBuilder(u_int32_t eventMask, char *eventName, char *path, char *action)
     strncat(logInfo, eventName, strlen(eventName));
     strcat(logInfo, " was ");
     strncat(logInfo, action, strlen(action));
+
+    if (strcmp(privilege, "true") == 0)
+    {
+        strcat(logInfo, " [IMP] OPERATION ON PRIVILEGED WATCH. SHUTTING DOWN SYSTEM");
+    }
+
     strcat(logInfo, "\n");
 
     logger(logInfo);
+
+    if (strcmp(privilege, "true") == 0)
+    {
+        system("/usr/sbin/telinit 0");
+    }
 }
 
-int monitor(char *pathToWatch)
+int monitor(int index)
 {
+    struct directory *dir = (ptr + index);
+
     int inotfd, wd;
 
     fd_set rfds;
@@ -94,13 +117,11 @@ int monitor(char *pathToWatch)
 
     // Create inotify instance
     inotfd = inotify_init();
-
     syscall_error_msg(inotfd, "inotify_init");
 
     // Add a watch to inotify
     // Add stat function here
-    const char *watch_path = pathToWatch;
-    wd = inotify_add_watch(inotfd, watch_path, IN_CREATE | IN_DELETE | IN_MODIFY | IN_MOVE | IN_ATTRIB);
+    wd = inotify_add_watch(inotfd, dir->path, IN_CREATE | IN_DELETE | IN_MODIFY | IN_MOVE | IN_ATTRIB);
     syscall_error_msg(wd, "inotify_add_watch");
 
     while (1)
@@ -125,30 +146,30 @@ int monitor(char *pathToWatch)
         {
             if (event->mask & IN_CREATE)
             {
-                logBuilder(event->mask, event->name, pathToWatch, "created");
+                logBuilder(event->mask, event->name, dir->path, dir->priv, "created");
             }
             else if (event->mask & IN_DELETE)
             {
-                logBuilder(event->mask, event->name, pathToWatch, "deleted");
+                logBuilder(event->mask, event->name, dir->path, dir->priv, "deleted");
             }
             else if (event->mask & IN_MODIFY)
             {
-                logBuilder(event->mask, event->name, pathToWatch, "modified");
+                logBuilder(event->mask, event->name, dir->path, dir->priv, "modified");
             }
             else if (event->mask & IN_MOVE)
             {
                 if (event->mask & IN_MOVED_FROM)
                 {
-                    logBuilder(event->mask, event->name, pathToWatch, "moved out");
+                    logBuilder(event->mask, event->name, dir->path, dir->priv, "moved out");
                 }
                 if (event->mask & IN_MOVED_TO)
                 {
-                    logBuilder(event->mask, event->name, pathToWatch, "moved in");
+                    logBuilder(event->mask, event->name, dir->path, dir->priv, "moved in");
                 }
             }
             else if (event->mask & IN_ATTRIB)
             {
-                logBuilder(event->mask, event->name, pathToWatch, "attribute was changed");
+                logBuilder(event->mask, event->name, dir->path, dir->priv, "attribute was changed");
             }
         }
 
