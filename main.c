@@ -147,8 +147,7 @@ CHILD:
             {
                 break;
             }
-            printf("Child process (%ld): Tock.\n", (long)getpid());
-            fflush(stdout);
+
             sleep(1);
         }
 
@@ -170,8 +169,6 @@ CHILD:
 
     while (!done)
     {
-        fprintf(stderr, "Parent process (%ld): Tick.\n", (long)getpid());
-        fflush(stderr);
         sleep(1);
 
         /* Try reaping the child process. */
