@@ -1,8 +1,8 @@
-#include "capstone.h"
+#include "capstone_FSM.h"
 
-void *createThread(void *vargp)
+void *createThread(void *index)
 {
-    monitor((char *)vargp);
+    monitor((intptr_t)index);
 }
 
 void *initialize()
@@ -13,14 +13,13 @@ void *initialize()
 
     for (int i = 0; i < THREADCOUNT; i++)
     {
-        int thread = pthread_create(&tid, NULL, createThread, (void *)paths[i]);
+        int thread = pthread_create(&tid, NULL, createThread, (void *)(intptr_t)i);
         syscall_error_msg(thread, "pthread_create");
     }
-
-    free(paths);
-    paths = NULL;
 
     pthread_exit(NULL);
 
     pthread_join(tid, NULL);
+
+    free(ptr);
 }
